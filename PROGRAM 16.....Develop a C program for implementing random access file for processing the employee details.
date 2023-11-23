@@ -1,26 +1,105 @@
 #include <stdio.h>
-struct clientData
-{                              
-unsigned int acctNum;
-char lastName[ 15 ];     
-char firstName[ 10 ];   
-double balance;       
-};                
-int main( void )
-{ 
-unsigned int i;       
-struct clientData blankClient = { 0, "", "", 0.0 }; 
-FILE *cfPtr;
-if ( ( cfPtr = fopen( "credit.dat", "wb" ) ) == NULL )
-{
-puts( "File could not be opened." );
+#include <stdlib.h>
+
+#define FILENAME "employee_data.bin"
+#define RECORD_SIZE sizeof(struct Employee)
+
+struct Employee {
+    int emp_id;
+    char emp_name[50];
+    float emp_salary;
+};
+
+void addEmployee() {
+    FILE *file = fopen(FILENAME, "ab");
+    if (file == NULL) {
+        perror("File opening failed");
+        exit(EXIT_FAILURE);
+    }
+
+    struct Employee newEmployee;
+
+    printf("Enter employee ID: ");
+    scanf("%d", &newEmployee.emp_id);
+    printf("Enter employee name: ");
+    scanf("%s", newEmployee.emp_name);
+    printf("Enter employee salary: ");
+    scanf("%f", &newEmployee.emp_salary);
+
+    fseek(file, 0, SEEK_END);
+    fwrite(&newEmployee, RECORD_SIZE, 1, file);
+
+    fclose(file);
 }
-else
-{                              
-for ( i = 1; i <= 100; ++i )
-{                                   
-fwrite( &blankClient, sizeof( struct clientData ), 1, cfPtr );
-}                                                
-fclose ( cfPtr );
+
+void displayAllEmployees() {
+    FILE *file = fopen(FILENAME, "rb");
+    if (file == NULL) {
+        perror("File opening failed");
+        exit(EXIT_FAILURE);
+    }
+
+    struct Employee emp;
+
+    printf("Employee Details:\n");
+    while (fread(&emp, RECORD_SIZE, 1, file) == 1) {
+        printf("ID: %d, Name: %s, Salary: %.2f\n", emp.emp_id, emp.emp_name, emp.emp_salary);
+    }
+
+    fclose(file);
 }
+
+void updateEmployeeSalary(int empId, float newSalary) {
+    FILE *file = fopen(FILENAME, "r+b");
+    if (file == NULL) {
+        perror("File opening failed");
+        exit(EXIT_FAILURE);
+    }
+
+    struct Employee emp;
+
+    while (fread(&emp, RECORD_SIZE, 1, file) == 1) {
+        if (emp.emp_id == empId) {
+            emp.emp_salary = newSalary;
+            fseek(file, -RECORD_SIZE, SEEK_CUR);
+            fwrite(&emp, RECORD_SIZE, 1, file);
+            break;
+        }
+    }
+
+    fclose(file);
+}
+
+int main() {
+    int choice, empId;
+    float newSalary;
+
+    do {
+        printf("\n1. Add Employee\n2. Display All Employees\n3. Update Employee Salary\n4. Exit\n");
+        printf("Enter your choice: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                addEmployee();
+                break;
+            case 2:
+                displayAllEmployees();
+                break;
+            case 3:
+                printf("Enter employee ID to update salary: ");
+                scanf("%d", &empId);
+                printf("Enter new salary: ");
+                scanf("%f", &newSalary);
+                updateEmployeeSalary(empId, newSalary);
+                break;
+            case 4:
+                printf("Exiting...\n");
+                break;
+            default:
+                printf("Invalid choice\n");
+        }
+    } while (choice != 4);
+
+    return 0;
 }
